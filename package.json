@@ -1,6 +1,6 @@
 {
   "name": "tiny-cdn",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A tiny static files serving handler",
   "main": "tiny-cdn.js",
   "scripts": {
@@ -15,5 +15,10 @@
   "bugs": {
     "url": "https://github.com/WebReflection/tiny-cdn/issues"
   },
-  "homepage": "https://github.com/WebReflection/tiny-cdn#readme"
+  "homepage": "https://github.com/WebReflection/tiny-cdn#readme",
+  "dependencies": {
+    "holdon": "^0.2.1",
+    "mime-types": "^2.1.4"
+  },
+  "devDependencies": {}
 }
