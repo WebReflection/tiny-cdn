@@ -1,4 +1,14 @@
-'use strict'; /*! (C) Andrea Giammarchi */
+#!/usr/bin/env node
+/*   __  _           ________  _  __
+ *  / /_(_)__  __ __/ ___/ _ \/ |/ /
+ * / __/ / _ \/ // / /__/ // /    / 
+ * \__/_/_//_/\_, /\___/____/_/|_/  
+ *           /___/                  
+ * - - - - - - - - - - - - - - - - -
+ *              by Andrea Giammarchi
+ */
+
+'use strict';
 
 var
   // module dependencies
@@ -419,4 +429,17 @@ function tinyCDN(options) {
   };
 }
 
-(module.exports = tinyCDN).create = tinyCDN;
+if (module.parent) {
+  (module.exports = tinyCDN).create = tinyCDN;
+} else {
+  /**
+  -s|--source
+  -d|--dest
+  -e|--etag
+  -c|--compression
+  -ma|--max-age
+  -ml|--max-listeners
+  -acao|--access-control-allow-origin
+  */
+  require('cli/tiny-cdn-cli')(tinyCDN);
+}

@@ -9,6 +9,7 @@ This script is entirely based on [holdon](https://github.com/WebReflection/holdo
 It's rather about what you want to configure for your `tiny-cdn`,
 so here an object  description:
 
+
 ```js
 var tinyCDN = require('./tiny-cdn').create({
 
