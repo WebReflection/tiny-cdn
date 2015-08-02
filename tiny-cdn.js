@@ -330,11 +330,13 @@ function tinyCDN(options) {
       resolved
     ;
 
-    // in case the url is a folder, just fail
-    if (url[url.length - 1] === '/') {
+    // in case the url is the root folder, just fail
+    if (url === '/') {
       failLoop(request, response);
       onresponse.call(options, FILE_ERROR, url);
-    } else if (CACHE[group].add(channel, request, response)) {
+    }
+    // otherwise hold the request
+    else if (CACHE[group].add(channel, request, response)) {
       // resolve once URL slashes so file operations will be safe
       resolved = OK_SLASH ? url : fixPathSlashes(url);
       // temporarily saved sourceAbout and destAbout, reused later on
