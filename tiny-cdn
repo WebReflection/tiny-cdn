@@ -173,6 +173,7 @@ function tinyCDN(options) {
         headers['Cache-Control'] = 'public, max-age=' + MAX_AGE;
         headers['ETag'] = etag;
       }
+      headers['X-Served-By'] = 'tinyCDN';
       return withAccessControl(headers);
     }
   ;
