@@ -433,6 +433,15 @@ if (module.parent) {
   (module.exports = tinyCDN).create = tinyCDN;
 } else {
   /**
+
+  // to run a tiny-cdn instance
+  ./tiny-cdn run -s=demo/source -d=demo/dest -e -c
+
+  //to pre build gzip, deflate, and etags for /hello.txt request
+  ./tiny-cdn -s=demo/source -d=demo/dest --build=/hello.txt
+
+  // arguments
+
   -s|--source
   -d|--dest
   -e|--etag
@@ -440,6 +449,10 @@ if (module.parent) {
   -ma|--max-age
   -ml|--max-listeners
   -acao|--access-control-allow-origin
+
+  -h|--host|--ip
+  -p|--port
+
   */
   require('cli/tiny-cdn-cli')(tinyCDN);
 }
