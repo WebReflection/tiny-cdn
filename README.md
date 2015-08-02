@@ -2,15 +2,7 @@
 A tiny static files serving handler
 
 
-This script is entirely based on [holdon](https://github.com/WebReflection/holdon) potentials,
-yet another article/script of mine [nobody apparently understood](http://calendar.perfplanet.com/2014/boosting-io-holding-requests/),
-assuming the very low star rating in the repository is a good indicator.
-
-Well, turned out there's nothing I could test out there faster,
-as node based static file serving,
-than this `holdon` based algorithm.
-
-Enjoy, if you dare, from any Server or Internet of Thing based device!
+This script is entirely based on [holdon](https://github.com/WebReflection/holdon) potentials.
 
 
 ## API
