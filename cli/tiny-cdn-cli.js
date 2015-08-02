@@ -19,6 +19,7 @@ var
 module.exports = function (tinyCDN) {
   for (var
     next,
+    get,
     pair,
     server,
     args = process.argv,
@@ -86,6 +87,16 @@ module.exports = function (tinyCDN) {
           );
         }
         if (build) {
+
+          get = function (encoding) {
+            http.get({
+              hostname: addres.address,
+              port: addres.port,
+              path: build,
+              headers: {'accept-encoding': encoding},
+              agent: false
+            }).on('close', next);
+          };
           next = function () {
             if (!--i && !run) {
               console.log('[tinyCDN] ' + build + ' is ready');
@@ -95,28 +106,20 @@ module.exports = function (tinyCDN) {
           i = 1;
           if (config.compression) {
             i = 3;
-            http.get({
-              hostname: addres.address,
-              port: addres.port,
-              path: build,
-              headers: {'accept-encoding': 'deflate'},
-              agent: false
-            }).on('close', next);
-            http.get({
-              hostname: addres.address,
-              port: addres.port,
-              path: build,
-              headers: {'accept-encoding': 'gzip'},
-              agent: false
-            }).on('close', next);
+            fs.unlink(config.dest + build + '.deflate', function () {
+              fs.unlink(config.dest + build + '.deflate.' + config.etag, function () {
+                get('deflate');
+              });
+            });
+            fs.unlink(config.dest + build + '.gzip', function () {
+              fs.unlink(config.dest + build + '.gzip.' + config.etag, function () {
+                get('gzip');
+              });
+            });
           }
-          http.get({
-            hostname: addres.address,
-            port: addres.port,
-            path: build,
-            headers: {'accept-encoding': ''},
-            agent: false
-          }).on('close', next);
+          fs.unlink(config.dest + build + '.raw.' + config.etag, function () {
+            get('');
+          });
         }
       })
     ;
