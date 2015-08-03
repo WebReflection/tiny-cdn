@@ -455,5 +455,5 @@ if (module.parent) {
   -p|--port
 
   */
-  require('cli/tiny-cdn-cli')(tinyCDN);
+  require('./cli/tiny-cdn-cli.js')(tinyCDN);
 }
