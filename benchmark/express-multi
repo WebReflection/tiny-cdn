@@ -2,6 +2,7 @@
 
 var
   path = require('path'),
+  cluster = require('cluster'),
   compression = require('compression'),
   express = require('express'),
   staticFolder = path.resolve(__dirname, '../', 'demo', 'source'),
