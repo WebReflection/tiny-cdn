@@ -1,7 +1,10 @@
 {
   "name": "tiny-cdn",
   "bin": "./tiny-cdn",
-  "version": "0.2.4",
+  "files": [
+    "cli/tiny-cdn-cli.js"
+  ],
+  "version": "0.2.7",
   "description": "A tiny static files serving handler",
   "main": "tiny-cdn",
   "scripts": {
@@ -19,8 +22,7 @@
   "homepage": "https://github.com/WebReflection/tiny-cdn#readme",
   "dependencies": {
     "holdon": "^0.2.1",
-    "mime-types": "^2.1.4",
-    "tiny-cdn-cli": "file:./cli/tiny-cdn-cli.js"
+    "mime-types": "^2.1.4"
   },
   "devDependencies": {
     "compression": "^0.0.0",

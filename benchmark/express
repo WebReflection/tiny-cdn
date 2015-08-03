@@ -1,0 +1,29 @@
+#!/usr/bin/env node
+
+var
+  path = require('path'),
+  compression = require('compression'),
+  express = require('express'),
+  staticFolder = path.resolve(__dirname, '../', 'demo', 'source'),
+  app = express()
+;
+
+app.set('port', 7151);
+
+app.use(compression());
+app.use('/', express.static(staticFolder));
+if (process.argv[2] === 'no-etag') {
+  app.disable('etag');
+}
+app.listen(app.get('port'), function() {
+  console.log('Express is running at http://0.0.0.0:' + app.get('port') + '/');
+});
+
+// ab -n 1000 -c 100 http://0.0.0.0:7151/lorem-ipsum.txt
+// avg 2521 requests per second
+
+// ab -n 1000 -c 100 -H "Accept-Encoding: gzip" http://0.0.0.0:7151/lorem-ipsum.txt
+// avg 1617 requests per second
+
+// ab -n 1000 -c 100 -H "Accept-Encoding: deflate" http://0.0.0.0:7151/lorem-ipsum.txt
+// avg 1673 requests per second
