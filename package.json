@@ -1,8 +1,10 @@
 {
   "name": "tiny-cdn",
-  "version": "0.2.1",
+  "bin": "./tiny-cdn",
+  "version": "0.2.2",
   "description": "A tiny static files serving handler",
   "main": "tiny-cdn",
+  "man": ["./cli/tiny-cdn-cli.js"],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
