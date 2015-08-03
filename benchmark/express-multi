@@ -3,6 +3,7 @@
 var
   path = require('path'),
   cluster = require('cluster'),
+  numCPUs = require('os').cpus().length,
   compression = require('compression'),
   express = require('express'),
   staticFolder = path.resolve(__dirname, '../', 'demo', 'source'),
