@@ -21,9 +21,12 @@ app.listen(app.get('port'), function() {
 
 // ab -n 1000 -c 100 http://0.0.0.0:7151/lorem-ipsum.txt
 // avg 2521 requests per second
+// avg 226 requests per second on a Raspberry PI 2 using 1 core
 
 // ab -n 1000 -c 100 -H "Accept-Encoding: gzip" http://0.0.0.0:7151/lorem-ipsum.txt
 // avg 1617 requests per second
+// avg 122 requests per second on a Raspberry PI 2 using 1 core
 
 // ab -n 1000 -c 100 -H "Accept-Encoding: deflate" http://0.0.0.0:7151/lorem-ipsum.txt
 // avg 1673 requests per second
+// avg 122 requests per second on a Raspberry PI 2 using 1 core

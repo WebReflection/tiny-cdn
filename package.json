@@ -4,7 +4,7 @@
   "files": [
     "cli/tiny-cdn-cli.js"
   ],
-  "version": "0.2.7",
+  "version": "0.3.0",
   "description": "A tiny static files serving handler",
   "main": "tiny-cdn",
   "scripts": {

@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+
+var
+  path = require('path'),
+  http = require('http'),
+  cluster = require('cluster'),
+  numCPUs = require('os').cpus().length,
+  tinyCDN = require('../tiny-cdn'),
+  staticFolder = path.resolve(__dirname, '../', 'demo', 'source'),
+  port = 7151,
+  cache
+;
+
+if (cluster.isMaster) {
+  while (numCPUs--) cluster.fork(process.env);
+} else {
+  http
+    .createServer(tinyCDN({
+      source: path.resolve(__dirname, '../', 'demo', 'source'),
+      dest: path.resolve(__dirname, '../', 'demo', 'dest'),
+      compression: process.argv[3] || 'best',
+      etag: process.argv[2] === 'no-etag' ? false : (process.argv[2] || 'md5')
+    }))
+    .listen(port, '0.0.0.0', function () {
+      console.log('tinyCDN is running at http://0.0.0.0:' + port + '/');
+    })
+  ;
+}

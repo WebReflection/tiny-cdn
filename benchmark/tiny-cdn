@@ -22,9 +22,12 @@ http
 
 // ab -n 1000 -c 100 http://0.0.0.0:7151/lorem-ipsum.txt
 // avg 6566 requests per second
+// avg 479 requests per second on a Raspberry PI 2 using 1 core
 
 // ab -n 1000 -c 100 -H "Accept-Encoding: gzip" http://0.0.0.0:7151/lorem-ipsum.txt
 // avg 6907 requests per second
+// avg 519 requests per second on a Raspberry PI 2 using 1 core
 
 // ab -n 1000 -c 100 -H "Accept-Encoding: deflate" http://0.0.0.0:7151/lorem-ipsum.txt
 // avg 7016 requests per second
+// avg 477 requests per second on a Raspberry PI 2 using 1 core

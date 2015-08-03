@@ -12,6 +12,7 @@
 
 var
   // module dependencies
+  cluster = require('cluster'),
   crypto = require('crypto'),
   fs = require('fs'),
   path = require('path'),
@@ -20,6 +21,7 @@ var
   mime = require('mime-types'),
 
   // shared constants
+  MASTER = cluster.isMaster,
   OK_SLASH = path.sep === '/',
   CONTENT_TYPE = {
     BIN: mime.lookup('.bin'),
@@ -61,12 +63,37 @@ var
         });
       }
     };
-  }(holdon.create(['callback'])))
+  }(holdon.create(['callback']))),
+
+  // procedures that should be done in a single thread
+  // to avoid concurrency or corrupted writes
+  // will be defined at runtime
+  masterOnly = MASTER,
+  masterHolder,
+  masterHandler,
+  writeFile,
+  writeStream
 ;
 
 // shared utilities defined as function declaration
 // (for no reason whatsoever, just less typing that
 // became actually more the moment I wrote this comment)
+
+  // verify source or dest are valid directories
+  function checkDirectory(where, fail) {
+    try {
+      var stats = fs.statSync(where);
+      if (!stats.isDirectory()) throw null;
+    } catch(epicFail) {
+      throw new Error('[tinyCDN:Error] ' + fail + ': ' + where);
+    }
+  }
+
+  // normalizes tilde paths to current $HOME
+  function fixPathWithTilde(src) {
+    var i = src.indexOf('~');
+    return i < 0 ? src : process.env.HOME + src.slice(i + 1);
+  }
 
   // adjusts Windows slashes, eventually
   function fixPathSlashes(url) {
@@ -101,6 +128,20 @@ var
     return i < 0 ? url : url.slice(0, i);
   }
 
+  // used to send to a master cluster the right message
+  function sendToMaster(action, cluster, type, args, then) {
+    cluster.worker.once(type, then);
+    process.send({
+      tinyCDN: 'master',
+      tinyCDNInfo: {
+        id: cluster.worker.id,
+        type: type,
+        action: action,
+        arguments: args
+      }
+    });
+  }
+
 // finally, the exported module!
 function tinyCDN(options) {
 
@@ -132,8 +173,8 @@ function tinyCDN(options) {
       level: getCompressionLevel(options.compression)
     },
     // source and destination folders to use
-    SOURCE = options.source && OK_SLASH ? options.source.split('/').join(path.sep) : __dirname,
-    DEST = options.dest && OK_SLASH ? options.dest.split('/').join(path.sep) : __dirname,
+    SOURCE = options.source ? fixPathWithTilde(path.resolve(options.source)) : __dirname,
+    DEST = options.dest ? fixPathWithTilde(path.resolve(options.dest)) : __dirname,
 
     // 404 options
     $404 = options[404] || (Object.create || Object)(null),
@@ -177,6 +218,10 @@ function tinyCDN(options) {
       return withAccessControl(headers);
     }
   ;
+
+  // throw in case source folder or dest folders are not usable
+  checkDirectory(SOURCE, 'Invalid source folder');
+  checkDirectory(DEST, 'Invalid destination folder');
 
   // in case the chosen HASH is not available
   if (crypto.getHashes().indexOf(HASH) < 0) {
@@ -335,10 +380,17 @@ function tinyCDN(options) {
         'raw',
       encoding = group === 'raw' ? '' : group,
       channel = group + ':' + url,
+      // will be the right destination file
       destAbout,
+      // will be the right source file
       sourceAbout,
+      // will be the right fs.Stats for the source file
       statsAbout,
-      resolved
+      // recycled/DRY resolved once file path
+      resolved,
+      // shared callbacks between cluster logic and non cluster one
+      onWriteFile,
+      onWriteStream
     ;
 
     // in case the url is the root folder, just fail
@@ -379,19 +431,24 @@ function tinyCDN(options) {
                 if (err) {
                   failRequest(err, url, group, channel);
                 } else {
-                  // otherwise good: we have the source, we can compress it!
-                  fs
-                    .createReadStream(sourceAbout)
-                    .pipe(zlib[
-                      group === 'gzip' ? 'createGzip' : 'createDeflate'
-                    ](COMPRESSION))
-                    .pipe(fs.createWriteStream(statsAbout))
-                    .on('finish', function () {
-                      // once we have created the compressed file
-                      // we can finally ask its stats and serve it
-                      getStats(statsAbout, onStats); 
-                    })
-                  ;
+                  onWriteStream = function () {
+                    // once we have created the compressed file
+                    // we can finally ask its stats and serve it
+                    getStats(statsAbout, onStats); 
+                  };
+                  if (masterOnly) {
+                    // otherwise good: we have the source, we can compress it!
+                    fs
+                      .createReadStream(sourceAbout)
+                      .pipe(zlib[
+                        group === 'gzip' ? 'createGzip' : 'createDeflate'
+                      ](COMPRESSION))
+                      .pipe(fs.createWriteStream(statsAbout))
+                      .on('finish', onWriteStream)
+                    ;
+                  } else {
+                    writeStream(sourceAbout, group, COMPRESSION, statsAbout, onWriteStream);
+                  }
                 }
               });
             }
@@ -406,15 +463,21 @@ function tinyCDN(options) {
                 if (err) {
                   // let's try create it!
                   getHash(sourceAbout, function (etag) {
-                    // we can write the ETag content
-                    fs.writeFile(destAbout + '.' + HASH, etag, function (err) {
-                      // and if we didn't succeed, we have to give up!
+                    onWriteFile = function (err) {
+                      // if we didn't succeed, we have to give up!
                       if (err) {
                         failRequest(err, url, group, channel);
                       } else {
                         serveFile(url, group, channel, statsAbout, stats, encoding, etag);
                       }
-                    });
+                    };
+                    // we can write the ETag content
+                    if (masterOnly) {
+                      fs.writeFile(destAbout + '.' + HASH, etag, onWriteFile);
+                    } else {
+                      // cluster thing
+                      writeFile(destAbout + '.' + HASH, etag, onWriteFile);
+                    }
                   });
                 } else {
                   serveFile(url, group, channel, statsAbout, stats, encoding, etag);
@@ -456,4 +519,136 @@ if (module.parent) {
 
   */
   require('./cli/tiny-cdn-cli.js')(tinyCDN);
+}
+
+/*       ______             _____             
+ * _________  /___  __________  /_____________
+ * _  ___/_  /_  / / /_  ___/  __/  _ \_  ___/
+ * / /__ _  / / /_/ /_(__  )/ /_ /  __/  /    
+ * \___/ /_/  \__,_/ /____/ \__/ \___//_/     
+ *                                            
+ * - - - - - - - - - - - - - - - - - - - - - -
+ *                  still by Andrea Giammarchi
+ */
+
+// the only reason cluster makes sense here
+// is to avoid concurrent writings on the same file
+// so every runtime etag or compressed writing
+// will pass by a single threaded master
+// and it will notify everyone asking for the same thing
+// no matter how many clusters are in place
+
+// define operations to perform as cluster
+if (cluster.isMaster) {
+  cluster
+    .on('online', function (worker) {
+      // it's a lazy feature to avoid compromising
+      // performance  when no clusters are used
+      if (masterOnly) {
+        masterOnly = false;
+        // master will hold all write operations
+        masterHolder = holdon.create(['callback']);
+        // and will provide a single handler for all clusters
+        masterHandler = function (message) {
+          var args, info, out;
+          if (message.tinyCDN === 'master') {
+            info = message.tinyCDNInfo;
+            args = info.arguments;
+            out = {
+              tinyCDN: 'worker',
+              tinyCDNInfo: {
+                type: info.type,
+                arguments: [info.type]
+              }
+            };
+            args.unshift(info.type);
+            // rigth now only writeFile and writeStream
+            // are part of the cluster
+            switch (info.action) {
+              case 'writeFile':
+                writeFile.apply(function (err) {
+                  if (err) out.tinyCDNInfo.push(!!err);
+                  cluster.workers[info.id].send(out);
+                }, args);
+                break;
+              case 'writeStream':
+                writeStream.apply(function () {
+                  cluster.workers[info.id].send(out);
+                }, args);
+                break;
+            }
+          }
+        };
+        // so that if used in the master, will either write the ETag
+        writeFile = function writeFile(type, path, content) {
+          if (masterHolder.add(type, this)) {
+            fs.writeFile(path, content, function (err) {
+              for (var
+                callback = masterHolder.remove(type).callback,
+                i = 0; i < callback.length; callback[i++](err)
+              );
+            });
+          }
+        };
+        // or create the compressed version of the file once for all clusters
+        writeStream = function writeStream(type, source, group, COMPRESSION, target) {
+          if (masterHolder.add(type, this)) {
+            fs
+              .createReadStream(source)
+              .pipe(zlib[
+                group === 'gzip' ? 'createGzip' : 'createDeflate'
+              ](COMPRESSION))
+              .pipe(fs.createWriteStream(target))
+              .on('finish', function () {
+                for (var
+                  callback = masterHolder.remove(type).callback,
+                  i = 0; i < callback.length; callback[i++]()
+                );
+              })
+            ;
+          }
+        };
+      } else {
+        // be sure it won't be added twice by  accident
+        // (nodejs is unable to prevent this by default, sigh)
+        worker.removeListener('message', masterHandler);
+      }
+      // add masterHandler listener to any worker
+      worker.on('message', masterHandler);
+    })
+  ;
+} else {
+  // every cluster can ask the master to write an ETag
+  writeFile = function writeFile(path, content, then) {
+    var action = 'writeFile';
+    sendToMaster(
+      action,
+      cluster,
+      action + ':' + path,
+      [path, content],
+      then
+    );
+  };
+  // or create a compressed version of the requested source
+  writeStream = function writeStream(source, group, COMPRESSION, target, then) {
+    var action = 'writeStream';
+    sendToMaster(
+      action,
+      cluster,
+      action + ':' + target,
+      [source, group, COMPRESSION, target],
+      then
+    );
+  };
+  // so when an answer is received, the cluster will be
+  // capable of serving that single file and per each
+  // connection asking for one during the session
+  cluster.worker.on('message', function (message) {
+    if (message.tinyCDN === 'worker') {
+      cluster.worker.emit.apply(
+        cluster.worker,
+        message.tinyCDNInfo.arguments
+      );
+    }
+  });
 }
