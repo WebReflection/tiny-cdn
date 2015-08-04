@@ -16,9 +16,13 @@ while (cluster.isMaster && invoked++ < numCPUs) cluster.fork();
 
 wru.test([
   {
-    name: 'tiny-cdn-converger ' + (cluster.isMaster ? 'Master' : 'Worker'),
+    name: (cluster.isMaster ? '[Master] ' : '  [Worker] ') + 'tiny-cdn-converger',
     test: cluster.isMaster ?
       function () {
+        basic.method(123, function (master) {
+          wru.assert(master);
+        });
+        wru.assert('it can invoke as master too', result.shift());
         var done = wru.async(function () {
           wru.assert(result.every(function (num) {
             return this.test(num);

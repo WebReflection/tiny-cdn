@@ -1,4 +1,4 @@
-'use strict';
+'use strict'; // (C) Andrea Giammarchi
 
 var
   cluster = require('cluster'),
