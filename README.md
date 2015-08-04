@@ -1,6 +1,6 @@
 # tiny-cdn
 A tiny static files serving handler
-
+[![build status](https://secure.travis-ci.org/WebReflection/tiny-cdn.svg)](http://travis-ci.org/WebReflection/tiny-cdn)
 
 This script is entirely based on [holdon](https://github.com/WebReflection/holdon) potentials.
 
