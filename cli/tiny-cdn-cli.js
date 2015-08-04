@@ -1,4 +1,5 @@
-/*   __  _           ________  _  __
+/**                              cli
+ *   __  _           ________  _  __
  *  / /_(_)__  __ __/ ___/ _ \/ |/ /
  * / __/ / _ \/ // / /__/ // /    / 
  * \__/_/_//_/\_, /\___/____/_/|_/  
@@ -7,6 +8,38 @@
  *              by Andrea Giammarchi
  */
 
+/** HOW TO
+
+  ./tiny-cdn [run] [options]
+
+  Mandatory options
+
+    -s | --source           the source folder with static content
+    -d | --dest             the destination folder for ETags / gzip
+
+  Configuration options
+
+    -c | --compression      use compression and optionally specify its level
+                            best, speed, default, or an integer
+    -e | --etag             use etag and optionally specify its algorithm
+                            by default it's sha256
+    -ma | --max-age         the cache max-age header in seconds (default: 30672000)
+    -ml | --max-listeners   the maximum amount of listeners to use per each stream
+                            by default there is no limit
+    -ic | --ignore-cluster  if true (or empty) will never use master/cluster logic
+
+  Network options
+
+    -h | --host | -ip       if specified, will be used as server address
+    -p | --port             if specified, will be used as port
+
+  Build file option
+    -b | --build            if specified will pre build a file
+                            creating in the destination folder
+                            the gzip and deflate version of the file
+                            plus the ETag per each version
+
+*/
 
 'use strict';
 
@@ -49,6 +82,9 @@ module.exports = function (tinyCDN) {
         break;
       case '-h': case '--host': case '--ip':
         host = pair[1];
+        break;
+      case '-ic': case '--ignore-cluster':
+        config.ignoreCluster = pair[1] === 'true' || !pair[1];
         break;
       case '-ma': case '--max-age':
         config.maxAge = parseInt(pair[1] || 0,  10);

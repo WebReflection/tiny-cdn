@@ -64,15 +64,37 @@ var
       }
     };
   }(holdon.create(['callback']))),
+  mkDir = (function (cache) {
+    return function mkDir(root, file, then) {
+      var
+        sep = path.sep,
+        splitPath = file.slice(root.length + sep.length).split(sep)
+      ;
+      (function onMkdir(err) {
+        if (err && err.code !== 'EEXIST') then(err);
+        else if (splitPath.length < 2) then();
+        else {
+          root += sep + splitPath.shift();
+          if (cache.add(root, onMkdir)) {
+            fs.mkdir(root, function (err) {
+              for (var
+                callback = cache.remove(root).callback,
+                i = 0; i < callback.length; callback[i++](err)
+              );
+            });
+          }
+        }
+      }());
+    };
+  }(holdon.create(['callback']))),
 
   // procedures that should be done in a single thread
   // to avoid concurrency or corrupted writes
   // will be defined at runtime
   masterOnly = MASTER,
+  clusterManager = {},
   masterHolder,
-  masterHandler,
-  writeFile,
-  writeStream
+  masterHandler
 ;
 
 // shared utilities defined as function declaration
@@ -176,6 +198,9 @@ function tinyCDN(options) {
     SOURCE = options.source ? fixPathWithTilde(path.resolve(options.source)) : __dirname,
     DEST = options.dest ? fixPathWithTilde(path.resolve(options.dest)) : __dirname,
 
+    // if specified, it will ignore clusters related operations
+    IGNORE_CLUSTER = options.ignoreCluster === true,
+
     // 404 options
     $404 = options[404] || (Object.create || Object)(null),
     $404HTML = $404.html || $404.HTML || 'Not Found',
@@ -224,7 +249,7 @@ function tinyCDN(options) {
   checkDirectory(DEST, 'Invalid destination folder');
 
   // in case the chosen HASH is not available
-  if (crypto.getHashes().indexOf(HASH) < 0) {
+  if (USE_ETAG && crypto.getHashes().indexOf(HASH) < 0) {
     // warns and tries to grab the right one
     console.warn('unabe to use specified ETag hash: ' + HASH);
     HASH = crypto.getHashes().filter(function (hash) {
@@ -307,7 +332,7 @@ function tinyCDN(options) {
   // fail fast, fail cool and stuff ...
   function failLoop(request, response) {
     var
-      accept = request.headers.accept,
+      accept = request.headers.accept || '',
       head, end
     ;
     if (accept.indexOf(CONTENT_TYPE.HTML) < 0) {
@@ -430,24 +455,42 @@ function tinyCDN(options) {
                 // if there is an error we can just fail
                 if (err) {
                   failRequest(err, url, group, channel);
-                } else {
+                }
+                // otherwise we are good to create the compressed file
+                else {
                   onWriteStream = function () {
                     // once we have created the compressed file
                     // we can finally ask its stats and serve it
                     getStats(statsAbout, onStats); 
                   };
-                  if (masterOnly) {
-                    // otherwise good: we have the source, we can compress it!
-                    fs
-                      .createReadStream(sourceAbout)
-                      .pipe(zlib[
-                        group === 'gzip' ? 'createGzip' : 'createDeflate'
-                      ](COMPRESSION))
-                      .pipe(fs.createWriteStream(statsAbout))
-                      .on('finish', onWriteStream)
-                    ;
+                  if (masterOnly || IGNORE_CLUSTER) {
+                    // be sure the destination folder exists
+                    mkDir(DEST, statsAbout, function (err) {
+                      if (err) failRequest(err, url, group, channel);
+                      else {
+                        fs
+                          .createReadStream(sourceAbout)
+                          .pipe(zlib[
+                            group === 'gzip' ? 'createGzip' : 'createDeflate'
+                          ](COMPRESSION))
+                          .pipe(fs.createWriteStream(statsAbout))
+                          .on('finish', onWriteStream)
+                        ;
+                      }
+                    });
                   } else {
-                    writeStream(sourceAbout, group, COMPRESSION, statsAbout, onWriteStream);
+                    clusterManager.mkDir(DEST, statsAbout, function (err) {
+                      if (err) failRequest(err, url, group, channel);
+                      else {
+                        clusterManager.writeStream(
+                          sourceAbout,
+                          group,
+                          COMPRESSION,
+                          statsAbout,
+                          onWriteStream
+                        );
+                      }
+                    });
                   }
                 }
               });
@@ -462,7 +505,7 @@ function tinyCDN(options) {
                 // and if no file was available ...
                 if (err) {
                   // let's try create it!
-                  getHash(sourceAbout, function (etag) {
+                  getHash(statsAbout, function (etag) {
                     onWriteFile = function (err) {
                       // if we didn't succeed, we have to give up!
                       if (err) {
@@ -472,11 +515,10 @@ function tinyCDN(options) {
                       }
                     };
                     // we can write the ETag content
-                    if (masterOnly) {
+                    if (masterOnly || IGNORE_CLUSTER) {
                       fs.writeFile(destAbout + '.' + HASH, etag, onWriteFile);
                     } else {
-                      // cluster thing
-                      writeFile(destAbout + '.' + HASH, etag, onWriteFile);
+                      clusterManager.writeFile(destAbout + '.' + HASH, etag, onWriteFile);
                     }
                   });
                 } else {
@@ -493,34 +535,6 @@ function tinyCDN(options) {
   };
 }
 
-if (module.parent) {
-  (module.exports = tinyCDN).create = tinyCDN;
-} else {
-  /**
-
-  // to run a tiny-cdn instance
-  ./tiny-cdn run -s=demo/source -d=demo/dest -e -c
-
-  //to pre build gzip, deflate, and etags for /hello.txt request
-  ./tiny-cdn -s=demo/source -d=demo/dest --build=/hello.txt
-
-  // arguments
-
-  -s|--source
-  -d|--dest
-  -e|--etag
-  -c|--compression
-  -ma|--max-age
-  -ml|--max-listeners
-  -acao|--access-control-allow-origin
-
-  -h|--host|--ip
-  -p|--port
-
-  */
-  require('./cli/tiny-cdn-cli.js')(tinyCDN);
-}
-
 /*       ______             _____             
  * _________  /___  __________  /_____________
  * _  ___/_  /_  / / /_  ___/  __/  _ \_  ___/
@@ -532,23 +546,30 @@ if (module.parent) {
  */
 
 // the only reason cluster makes sense here
-// is to avoid concurrent writings on the same file
+// is to avoid concurrent writes on the same file
 // so every runtime etag or compressed writing
 // will pass by a single threaded master
-// and it will notify everyone asking for the same thing
-// no matter how many clusters are in place
+// and it will notify every worker asking for the same file
 
 // define operations to perform as cluster
 if (cluster.isMaster) {
   cluster
     .on('online', function (worker) {
+      var cleanCache;
       // it's a lazy feature to avoid compromising
-      // performance  when no clusters are used
+      // performance  when no cluster is used
       if (masterOnly) {
         masterOnly = false;
         // master will hold all write operations
         masterHolder = holdon.create(['callback']);
-        // and will provide a single handler for all clusters
+        // and we can clean each operation
+        cleanCache = function cleanCache() {
+          for (var
+            callback = masterHolder.remove(this).callback,
+            i = 0; i < callback.length; callback[i++].apply(null, arguments)
+          );
+        };
+        // it will use a single handler for each worker
         masterHandler = function (message) {
           var args, info, out;
           if (message.tinyCDN === 'master') {
@@ -566,13 +587,10 @@ if (cluster.isMaster) {
             // are part of the cluster
             switch (info.action) {
               case 'writeFile':
-                writeFile.apply(function (err) {
-                  if (err) out.tinyCDNInfo.push(!!err);
-                  cluster.workers[info.id].send(out);
-                }, args);
-                break;
               case 'writeStream':
-                writeStream.apply(function () {
+              case 'mkDir':
+                clusterManager[info.action].apply(function (err) {
+                  if (err) out.tinyCDNInfo.push(!!err);
                   cluster.workers[info.id].send(out);
                 }, args);
                 break;
@@ -580,18 +598,15 @@ if (cluster.isMaster) {
           }
         };
         // so that if used in the master, will either write the ETag
-        writeFile = function writeFile(type, path, content) {
+        clusterManager.writeFile = function (type, path, content) {
           if (masterHolder.add(type, this)) {
             fs.writeFile(path, content, function (err) {
-              for (var
-                callback = masterHolder.remove(type).callback,
-                i = 0; i < callback.length; callback[i++](err)
-              );
+              cleanCache.apply(type, arguments);
             });
           }
         };
         // or create the compressed version of the file once for all clusters
-        writeStream = function writeStream(type, source, group, COMPRESSION, target) {
+        clusterManager.writeStream = function (type, source, group, COMPRESSION, target) {
           if (masterHolder.add(type, this)) {
             fs
               .createReadStream(source)
@@ -600,12 +615,17 @@ if (cluster.isMaster) {
               ](COMPRESSION))
               .pipe(fs.createWriteStream(target))
               .on('finish', function () {
-                for (var
-                  callback = masterHolder.remove(type).callback,
-                  i = 0; i < callback.length; callback[i++]()
-                );
+                cleanCache.call(type);
               })
             ;
+          }
+        };
+        // or create directories only once
+        clusterManager.mkDir = function (type, root, file) {
+          if (masterHolder.add(type, this)) {
+            mkDir(root, file, function (err) {
+              cleanCache.apply(type, arguments);
+            });
           }
         };
       } else {
@@ -619,7 +639,7 @@ if (cluster.isMaster) {
   ;
 } else {
   // every cluster can ask the master to write an ETag
-  writeFile = function writeFile(path, content, then) {
+  clusterManager.writeFile = function (path, content, then) {
     var action = 'writeFile';
     sendToMaster(
       action,
@@ -630,13 +650,24 @@ if (cluster.isMaster) {
     );
   };
   // or create a compressed version of the requested source
-  writeStream = function writeStream(source, group, COMPRESSION, target, then) {
+  clusterManager.writeStream = function (source, group, COMPRESSION, target, then) {
     var action = 'writeStream';
     sendToMaster(
       action,
       cluster,
       action + ':' + target,
       [source, group, COMPRESSION, target],
+      then
+    );
+  };
+  // or create directories only once
+  clusterManager.mkDir = function (root, file, then) {
+    var action = 'mkDir';
+    sendToMaster(
+      action,
+      cluster,
+      action + ':' + file,
+      [root, file],
       then
     );
   };
@@ -651,4 +682,11 @@ if (cluster.isMaster) {
       );
     }
   });
+}
+
+// exported or run as cli
+if (module.parent) {
+  (module.exports = tinyCDN).create = tinyCDN;
+} else {
+  require('./cli/tiny-cdn-cli.js')(tinyCDN);
 }

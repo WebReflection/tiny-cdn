@@ -8,21 +8,22 @@ var
   tinyCDN = require('../tiny-cdn'),
   staticFolder = path.resolve(__dirname, '../', 'demo', 'source'),
   port = 7151,
-  cache
+  message = numCPUs + ' tinyCDN workers at http://0.0.0.0:' + port + '/'
 ;
 
 if (cluster.isMaster) {
-  while (numCPUs--) cluster.fork(process.env);
+  while (numCPUs--) cluster.fork();
+  cluster.once('online', function () {
+    console.log(message);
+  });
 } else {
   http
     .createServer(tinyCDN({
-      source: path.resolve(__dirname, '../', 'demo', 'source'),
+      source: staticFolder,
       dest: path.resolve(__dirname, '../', 'demo', 'dest'),
       compression: process.argv[3] || 'best',
       etag: process.argv[2] === 'no-etag' ? false : (process.argv[2] || 'md5')
     }))
-    .listen(port, '0.0.0.0', function () {
-      console.log('tinyCDN is running at http://0.0.0.0:' + port + '/');
-    })
+    .listen(port, '0.0.0.0')
   ;
 }

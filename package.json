@@ -4,11 +4,11 @@
   "files": [
     "cli/tiny-cdn-cli.js"
   ],
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A tiny static files serving handler",
   "main": "tiny-cdn",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/.test.js"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "compression": "^1.5.2",
-    "express": "^4.0.0"
+    "express": "^4.0.0",
+    "wru": "^0.2.7"
   }
 }
