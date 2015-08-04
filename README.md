@@ -1,12 +1,12 @@
-# tiny-cdn
-A tiny static files serving handler
-[![build status](https://secure.travis-ci.org/WebReflection/tiny-cdn.svg)](http://travis-ci.org/WebReflection/tiny-cdn)
+# tiny-cdn [![build status](https://secure.travis-ci.org/WebReflection/tiny-cdn.svg)](http://travis-ci.org/WebReflection/tiny-cdn)
 
-This script is entirely based on [holdon](https://github.com/WebReflection/holdon) potentials.
+A tiny static files serving handler
+
+A [holdon](https://github.com/WebReflection/holdon) concept based script.
 
 
 ## API
-It's rather about what you want to configure for your `tiny-cdn`,
+The API is rather about what you want to configure for your `tiny-cdn`,
 so here an object  description:
 
 
@@ -64,6 +64,11 @@ var tinyCDN = require('./tiny-cdn').create({
   // with the specified value
   accessControlAllowOrigin: '*',
 
+
+  // if cluster is used and you'd like
+  // to not use optimizations made for multiple workers
+  // feel free to force this flag to true
+  ignoreCluster: false,
 
   // optional, if specified will define
   // the Not Found content per each page
