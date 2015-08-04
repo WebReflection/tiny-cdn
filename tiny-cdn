@@ -541,13 +541,19 @@ function tinyCDN(options) {
                 if (err) {
                   // let's try create it!
                   fileManager.getHash(statsAbout, function (etag) {
-                    // we can write the ETag content
-                    fileManager.writeFile(destAbout + '.' + HASH, etag, function (err) {
-                      // if we didn't succeed, we have to give up!
-                      if (err) {
-                        failRequest(err, url, group, channel);
-                      } else {
-                        serveFile(url, group, channel, statsAbout, stats, encoding, etag);
+                    // be sure the destination folder exists
+                    fileManager.mkDir(DEST, destAbout, function (err) {
+                      if (err) failRequest(err, url, group, channel);
+                      else {
+                        // we can write the ETag content
+                        fileManager.writeFile(destAbout + '.' + HASH, etag, function (err) {
+/* ```   /hadoooOOKen! */ // if we didn't succeed, we have to give up!
+/* c Oo      _         */ if (err) {
+/* / |_____//- - - =o\ */   failRequest(err, url, group, channel);
+/* | -- ___ = = = = ( )*/ } else {
+/* | |     \_- - - =o/ */   serveFile(url, group, channel, statsAbout, stats, encoding, etag);
+/*/  \                 */ }
+                        });
                       }
                     });
                   });
