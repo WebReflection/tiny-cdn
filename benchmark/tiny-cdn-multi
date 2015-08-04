@@ -8,7 +8,13 @@ var
   tinyCDN = require('../tiny-cdn'),
   staticFolder = path.resolve(__dirname, '../', 'demo', 'source'),
   port = 7151,
-  message = numCPUs + ' tinyCDN workers at http://0.0.0.0:' + port + '/'
+  message = numCPUs + ' tinyCDN workers at http://0.0.0.0:' + port + '/',
+  cdn = tinyCDN({
+    source: staticFolder,
+    dest: path.resolve(__dirname, '../', 'demo', 'dest'),
+    compression: process.argv[3] || 'best',
+    etag: process.argv[2] === 'no-etag' ? false : (process.argv[2] || 'md5')
+  })
 ;
 
 if (cluster.isMaster) {
@@ -18,12 +24,7 @@ if (cluster.isMaster) {
   });
 } else {
   http
-    .createServer(tinyCDN({
-      source: staticFolder,
-      dest: path.resolve(__dirname, '../', 'demo', 'dest'),
-      compression: process.argv[3] || 'best',
-      etag: process.argv[2] === 'no-etag' ? false : (process.argv[2] || 'md5')
-    }))
+    .createServer(cdn)
     .listen(port, '0.0.0.0')
   ;
 }

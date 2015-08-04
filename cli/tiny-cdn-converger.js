@@ -1,4 +1,25 @@
-'use strict'; // (C) Andrea Giammarchi
+/* tinyCDN
+ *       ______             _____             
+ * _________  /___  __________  /_____________
+ * _  ___/_  /_  / / /_  ___/  __/  _ \_  ___/
+ * / /__ _  / / /_/ /_(__  )/ /_ /  __/  /    
+ * \___/ /_/  \__,_/ /____/ \__/ \___//_/     
+ *                                            
+ * - - - - - - - - - - - - - - - - - - - - - -
+ *                  still by Andrea Giammarchi
+ */
+
+// the only reason cluster makes sense here
+// is to avoid concurrent writes on the same file
+// so every runtime etag or compressed writing
+// will pass by a single threaded master
+// and it will notify every worker asking for the same file
+
+// it is possible to ignore this module passing
+// ignoreCluster: true
+// as configuration option
+
+'use strict';
 
 var
   cluster = require('cluster'),
@@ -36,10 +57,13 @@ module.exports = cluster.isMaster ?
           self[message.action].apply(self, message.arguments);
         }
       }
+
       var self = this, k;
+
       for (k in options) {
         self[k] = options[k];
       }
+
       cluster.on('online', function (worker) {
         worker.on('message', handler);
       });

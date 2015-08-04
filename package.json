@@ -2,7 +2,8 @@
   "name": "tiny-cdn",
   "bin": "./tiny-cdn",
   "files": [
-    "cli/tiny-cdn-cli.js"
+    "cli/tiny-cdn-cli.js",
+    "cli/tiny-cdn-converger.js"
   ],
   "version": "0.3.1",
   "description": "A tiny static files serving handler",
