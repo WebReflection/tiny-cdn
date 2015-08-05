@@ -95,6 +95,13 @@ var
 // (for no reason whatsoever, just less typing that
 // became actually more the moment I wrote this comment)
 
+  // if an options.compress Array is passed
+  // it will normalize all extensions as path.ext()
+  function asFileExtension(Null, fileName) {
+    Null[path.extname('file.' + fileName)] = true;
+    return Null;
+  }
+
   // verify source or dest are valid directories
   function checkDirectory(where, fail) {
     try {
@@ -163,8 +170,31 @@ function tinyCDN(options) {
 
   var
     // privagte scope "constants"
-    USE_COMPRESSION = !!options.compression,
+    USE_COMPRESSION = !!(options.compression || options.compress),
     USE_ETAG = !!options.etag,
+
+    // compressed file are white-listed by file extension
+    // I am not sure how compatible is these days a compressed PDF
+    // so I've left it out for now. However,
+    // it is possible to pass this value as Array of extensions
+    // either 'txt' or '.txt' are accepted
+    nullObject = (Object.create||Object)(null),
+    COMPRESS = USE_COMPRESSION ?
+      (options.compress || [
+        'js',   /*                   ,%%%,            */
+        'css',  /*                 ,%%%` %==--        */
+        'txt',  /*                ,%%`( '|            */
+        'html', /*               ,%%@ /\_/            */
+        'svg',  /*     ,%.-"""--%%% "@@__             */
+        'md',   /*    %%/             |__`\           */
+        'htm',  /*   .%'\     |   \   /  //           */
+        'xml',  /*   ,%' >   .'----\ |  [/            */
+        'json', /*      < <<`       ||                */
+        'yml'   /*       `\\\       ||    chris.com   */
+        /*,'pdf'/*         )\\      )\                */
+        /*,'???'/* ^^^jgs^^"""^^^^^^""^^^^^^^^^^^^^^^^*/
+      ]).reduce(asFileExtension, nullObject) :
+      nullObject,
 
     // default hash used to flag ETag header: sha256 (if present, resolved at runtime otherwise)
     HASH = USE_ETAG && typeof options.etag === 'string' ? options.etag : 'sha256',
@@ -324,17 +354,17 @@ function tinyCDN(options) {
     console.warn('unabe to use specified ETag hash: ' + HASH);
     HASH = crypto.getHashes().filter(function (hash) {
       // choose in higher security level order
-      switch (hash) {
-        case 'sha512':
-        case 'sha384':
-        case 'sha256':
-        case 'sha224':
-        case 'sha1':
-        case 'md5':
-          return true;
-        default:
-          return false;
-      }
+      switch (hash) {     /*░░░░░░░▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄░░░░░░*/
+        case 'sha512':    /*░░░░░░█░░▄▀▀▀▀▀▀▀▀▀▀▀▀▀▄░░█░░░░░*/
+        case 'sha384':    /*░░░░░░█░█░▀░░░░░▀░░▀░░░░█░█░░░░░*/
+        case 'sha256':    /*░░░░░░█░█░░░░░░░░▄▀▀▄░▀░█░█▄▀▀▄░*/
+        case 'sha224':    /*█▀▀█▄░█░█░░▀░░░░░█░░░▀▄▄█▄▀░░░█░*/
+        case 'sha1':      /*▀▄▄░▀██░█▄░▀░░░▄▄▀░░░░░░░░░░░░▀▄*/
+        case 'md5':       /*░░▀█▄▄█░█░░░░▄░░█░░░▄█░░░▄░▄█░░█*/
+          return true;    /*░░░░░▀█░▀▄▀░░░░░█░██░▄░░▄░░▄░███*/
+        default:          /*░░░░░▄█▄░░▀▀▀▀▀▀▀▀▄░░▀▀▀▀▀▀▀░▄▀░*/
+          return false;   /*░░░░█░░▄█▀█▀▀█▀▀▀▀▀▀█▀▀█▀█▀▀█░░░*/
+      }                   /*░░░░▀▀▀▀░░▀▀▀░░░░░░░░▀▀▀░░▀▀░░░░*/
     }).sort().pop();
     // if no HASH is usable, we cannot go on
     if (!HASH) throw new Error('unabe to use any ETag');
@@ -448,7 +478,7 @@ function tinyCDN(options) {
       // and try to use it to figure out in which group
       // this connection should be held
       // but only if the compression is ON
-      group = USE_COMPRESSION ? (
+      group = USE_COMPRESSION && COMPRESS[path.extname(url)] ? (
         // most common accepted compression
         acceptEncoding.indexOf('gzip') < 0 ?
           // fallback to deflate if no gzip
@@ -518,12 +548,12 @@ function tinyCDN(options) {
                       fileManager.writeStream(
                         sourceAbout,
                         statsAbout,
-                        group,
-                        function () {
-                          // once we have created the compressed file
-                          // we can finally ask its stats again
-                          fileManager.getStats(statsAbout, onStats); 
-                        }
+/* ```   /hadoooKen! */ group,
+/* c Oo      _       */ function () {
+/* / |_____//- - =o\ */   // once we have created the compressed file
+/* | -- ___ = = = ( )*/   // we can finally ask its stats again
+/* | |     \_- - =o/ */   fileManager.getStats(statsAbout, onStats); 
+/*/  \               */ }
                       );
                     }
                   });

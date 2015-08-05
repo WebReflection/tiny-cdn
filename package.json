@@ -5,8 +5,21 @@
     "cli/tiny-cdn-cli.js",
     "cli/tiny-cdn-converger.js"
   ],
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A tiny static files serving handler",
+  "keywords": [
+    "gzip",
+    "deflate",
+    "cdn",
+    "performance",
+    "raspberry",
+    "arduino",
+    "IoT",
+    "static",
+    "files",
+    "express",
+    "alternative"
+  ],
   "main": "tiny-cdn",
   "scripts": {
     "test": "node test/.test.js"

@@ -9,7 +9,7 @@ var
 ;
 
 fs.readdirSync(__dirname).filter(function(file){
-  if (ext.test(file) && file !== path.basename(__filename)) {
+  if (ext.test(file) && file !== path.basename(__filename) && file.indexOf('example')) {
     tests.push(file.replace(ext, ''));
     spawn(
       'node', [modules, path.join('test', file)], {

@@ -10,6 +10,7 @@ var
   port = 7151,
   message = numCPUs + ' tinyCDN workers at http://0.0.0.0:' + port + '/',
   cdn = tinyCDN({
+    //ignoreCluster: true,
     source: staticFolder,
     dest: path.resolve(__dirname, '../', 'demo', 'dest'),
     compression: process.argv[3] || 'best',
@@ -19,9 +20,14 @@ var
 
 if (cluster.isMaster) {
   while (numCPUs--) cluster.fork();
-  cluster.once('online', function () {
-    console.log(message);
-  });
+  cluster
+    .on('exit', function (worker) {
+      console.log('Worker ' + worker.id + ' died');
+      cluster.fork();
+    })
+    .once('online', function () {
+      console.log(message);
+    });
 } else {
   http
     .createServer(cdn)

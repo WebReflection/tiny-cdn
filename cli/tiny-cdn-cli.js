@@ -21,6 +21,7 @@
 
     -c | --compression      use compression and optionally specify its level
                             best, speed, default, or an integer
+    -cl | --compress-list   a comma separated list of extension to compress
     -e | --etag             use etag and optionally specify its algorithm
                             by default it's sha256
     -ma | --max-age         the cache max-age header in seconds (default: 30672000)
@@ -73,6 +74,8 @@ module.exports = function (tinyCDN) {
         break;
       case '-c': case '--compression':
         config.compression = pair[1] || 'best';
+      case '-cl': case '--compress-list':
+        config.compress = pair[1].split(',');
         break;
       case '-d': case '--dest':
         config.dest = path.resolve(pair[1]);

@@ -23,9 +23,14 @@ if (process.argv[2] === 'no-etag') {
 
 if (cluster.isMaster) {
   while (numCPUs--) cluster.fork();
-  cluster.once('online', function () {
-    console.log(message);
-  });
+  cluster
+    .on('exit', function (worker) {
+      console.log('Worker ' + worker.id + ' died');
+      cluster.fork();
+    })
+    .once('online', function () {
+      console.log(message);
+    });
 } else {
   app.listen(app.get('port'));
 }
