@@ -427,9 +427,11 @@ In latter case two workers asked in different reading time the same file ... whi
 #### Converger Performance
 
 While this might not look like a huge win on the reading path,
-this will actually safe your Raspberry PI, as well as your server,
-for all cases when you need some runtime operation like compressing a file
-or creating its etag.
+this might actually save your Raspberry PI, as well as your server,
+for all cases when you need some runtime operation like compressing
+and storing a file or creating its etag.
+
+Those kind of slow operation that specially on SD cards might take "forever".
 
 The **writing** is indeed a wonderful fit for `Converger` which is, together with `holdon` module,
 capable of bringing in a very good performance compromise even for IoT projects.
