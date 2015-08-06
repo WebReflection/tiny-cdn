@@ -225,10 +225,17 @@ Build file option
 This is the minimum requirement to run an http server:
 
 ```sh
+tiny-cdn run
+```
+Above snippet will start `tinyCDN` static file serving in the current folder without creating etags or compressed files.
+Handy to quickly test some directory content statically.
+
+It is possible to specify both source and destination though:
+```sh
 tiny-cdn run -s=./source -d=./dest
 ```
 
-To use compression and etags
+To use compression and etags, we can add related flags too:
 ```sh
 tiny-cdn run -s=./source -d=./dest -e -c
 ```

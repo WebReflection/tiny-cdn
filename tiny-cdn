@@ -219,8 +219,9 @@ function tinyCDN(options) {
       level: getCompressionLevel(options.compression)
     },
     // source and destination folders to use
-    SOURCE = options.source ? fixPathWithTilde(path.resolve(options.source)) : __dirname,
-    DEST = options.dest ? fixPathWithTilde(path.resolve(options.dest)) : __dirname,
+    // by default it will be the current path
+    SOURCE = options.source ? fixPathWithTilde(path.resolve(options.source)) : path.resolve('.'),
+    DEST = options.dest ? fixPathWithTilde(path.resolve(options.dest)) : path.resolve('.'),
 
     // if specified, it will ignore clusters related operations
     IGNORE_CLUSTER = options.ignoreCluster === true,
