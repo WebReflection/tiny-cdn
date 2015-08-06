@@ -74,6 +74,7 @@ module.exports = function (tinyCDN) {
         break;
       case '-c': case '--compression':
         config.compression = pair[1] || 'best';
+        break;
       case '-cl': case '--compress-list':
         config.compress = pair[1].split(',');
         break;
