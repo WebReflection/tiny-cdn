@@ -29,6 +29,11 @@
                             by default there is no limit
     -ic | --ignore-cluster  if true (or empty) will never use master/cluster logic
 
+  SSL options
+
+    -ssl-cert               will use the provided cert file to run HTTPS instead of HTTP
+    -ssl-key                will use the provided key file to run HTTPS instead of HTTP
+
   Network options
 
     -h | --host | -ip       if specified, will be used as server address
@@ -47,21 +52,36 @@
 var
   fs = require('fs'),
   path = require('path'),
-  http = require('http')
+  http = require('http'),
+  https = require('https')
 ;
+
+function fixPathWithTilde(src) {
+  var i = src.indexOf('~');
+  return i < 0 ? src : process.env.HOME + src.slice(i + 1);
+}
+
+function getContent(src) {
+  return fs.readFileSync(path.resolve(fixPathWithTilde(src)));
+}
 
 module.exports = function (tinyCDN) {
   for (var
-    next,
     get,
+    handler,
+    next,
     pair,
     server,
+    sslCert,
+    sslKey,
+    tcdn,
     args = process.argv,
     config = {},
     host = '0.0.0.0',
     port = 7151,
     build = false,
     run = false,
+    ssl = 0,
     i = 2; i < args.length; i++
   ) {
     pair = args[i].split('=');
@@ -103,20 +123,57 @@ module.exports = function (tinyCDN) {
       case '-s': case '--source':
         config.source = path.resolve(pair[1]);
         break;
+      case '-ssl-cert':
+        ssl++;
+        try {
+          sslCert = getContent(pair[1]);
+        } catch (o_O) {
+          console.error('\n[ERROR] Unable to read SSL certificate: ' + pair[1] + '\n');
+          process.exit(1);
+        }
+        break;
+      case '-ssl-key':
+        ssl++;
+        try {
+          sslKey = getContent(pair[1]);
+        } catch (o_O) {
+          console.error('\n[ERROR] Unable to read SSL key: ' + pair[1] + '\n');
+          process.exit(1);
+        }
+        break;
       // special argument, if specified will run tinyCDN
       // using the provided configuration as simple http server
       case 'run':
+        ssl++;
         run = true;
         break;
     }
   }
   if (run || build) {
-    server = http
-      .createServer(tinyCDN(config))
+    tcdn = tinyCDN(config);
+    handler = function (request, response) {
+      if (request.url[request.url.length - 1] === '/') {
+        request.url += 'index.html';
+      }
+      tcdn(request, response);
+    };
+    if (ssl === 3) {
+      server = https.createServer({
+        key: sslKey,
+        cert: sslCert
+      }, handler);
+    } else {
+      server = http.createServer(handler);
+    }
+    server
       .listen(port, host, function () {
         var
           addres = this.address(),
-          full = 'http://' + addres.address + ':' + addres.port + '/'
+          full = ''.concat(
+            (ssl === 3 ? 'https' : 'http'), '://',
+            addres.address, ':',
+            addres.port, '/'
+          )
         ;
         if (run) {
           console.log(
@@ -127,9 +184,8 @@ module.exports = function (tinyCDN) {
           );
         }
         if (build) {
-
           get = function (encoding) {
-            http.get({
+            (ssl === 3 ? https : http).get({
               hostname: addres.address,
               port: addres.port,
               path: build,

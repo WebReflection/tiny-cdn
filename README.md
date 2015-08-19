@@ -4,10 +4,10 @@ A tiny static files serving handler
 
 
 ### About
-This module has been developed on top of [holdon](https://github.com/WebReflection/holdon) utility and it targets
-mostly Internet of Things devices such Arduino Yun or Raspberry PI.
+This module has been developed on top of [holdon](https://github.com/WebReflection/holdon) utility.
 
-It has also been tested on regular servers and it has demonstrated to be both reliable and 2X faster than common nodejs solutions.
+While this script is the fastest on Internet of Things devices such Arduino Yun or Raspberry PI, it has also been tested on regular servers and it has demonstrated to be both reliable and on average 2X or more faster than common nodejs solutions.
+
 
 
 #### How to install
@@ -186,7 +186,7 @@ var tinyCDN = require('./tiny-cdn').create({
 ```
 
 ## The CLI API
-If used directly as executable, `tinyCDN` is capable of creating an http server, pre-build a file and its compressed versions, or generate a configuration JSON/object content to read and test.
+If used directly as executable, `tinyCDN` is capable of creating an *http* or *https* server, pre-build a file and its compressed versions, or generate a configuration JSON/object content to read and test.
 
 ```
 ./tiny-cdn [run] [options]
@@ -207,6 +207,11 @@ Configuration options
   -ml | --max-listeners   the maximum amount of listeners to use per each stream
                           by default there is no limit
   -ic | --ignore-cluster  if true (or empty) will never use master/cluster logic
+
+SSL options
+
+  -ssl-cert               will use the provided cert file to run HTTPS instead of HTTP
+  -ssl-key                will use the provided key file to run HTTPS instead of HTTP
 
 Network options
 
@@ -229,6 +234,11 @@ tiny-cdn run
 ```
 Above snippet will start `tinyCDN` static file serving in the current folder without creating etags or compressed files.
 Handy to quickly test some directory content statically.
+
+Please note that point at a generic `/folder/` will automatically check for an `index.html` file within that folder.
+
+Reaching the default shown url will also look for an `index.html` file and  will return a Not Found error if none is provided.
+
 
 It is possible to specify both source and destination though:
 ```sh
@@ -275,6 +285,26 @@ Now we'll have also  `./dest/js/main.js.raw.gzip` and `./dest/js/main.js.raw.def
 Putting everything together will have also `./dest/js/main.js.raw.gzip.sha256` and `./dest/js/main.js.raw.deflate.sha256` files generated.
 ```sh
 tiny-cdn -s=./source -d=./dest -b=/js/main.js -c -e
+```
+
+### Running tinyCDN through SSL
+If the `-ssl-cert=file.crt` and the `-ssl-key=file.key` are provided, the CLI will create a **https** server instead.
+Please note that if you created the certificate using your local network IP address, you might need to specify it as `-h=192.168.1.5` in order to have a link in  console that will point to the authorized page.
+
+Otherwise you can always write down manually that IP address when visiting the CDN.
+
+If you have no idea how to create a certificate, feel free to [read this "How To" page](https://www.webreflection.co.uk/blog/2015/08/08/bringing-ssl-to-your-private-network).
+
+Following an example on how to run SSL and HTTPS server
+```bash
+./tiny-cdn run \
+  -s=source/ \
+  -ssl-key=~/.server/192.168.1.5.key \
+  -ssl-cert=~/test/https/192.168.1.5.crt \
+  -h=192.168.1.5
+
+# will log
+# [tinyCDN] running on https://192.168.1.5:7151/
 ```
 
 
