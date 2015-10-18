@@ -604,6 +604,7 @@ function tinyCDN(options) {
 
 // exported or run as cli
 if (module.parent) {
+  tinyCDN.Converger = Converger;
   (module.exports = tinyCDN).create = tinyCDN;
 } else {
   require('./cli/tiny-cdn-cli.js')(tinyCDN);

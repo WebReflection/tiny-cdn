@@ -358,7 +358,7 @@ var
   cluster = require('cluster'),
   fs = require('fs'),
   numCPUs = require('os').cpus().length,
-  Converger = require('../cli/tiny-cdn-converger.js'),
+  Converger = require('tiny-cdn').Converger,
 
   // it should be defined no matter if this is master or worker
   // it will perform in master anyway
