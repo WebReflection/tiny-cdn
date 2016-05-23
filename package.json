@@ -5,7 +5,7 @@
     "cli/tiny-cdn-cli.js",
     "cli/tiny-cdn-converger.js"
   ],
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "A tiny static files serving handler",
   "keywords": [
     "gzip",

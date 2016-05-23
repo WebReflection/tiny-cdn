@@ -86,7 +86,7 @@ var
             });
           }
         }
-      }());
+      }(null));
     };
   }(holdon.create(['callback'])))
 ;
@@ -94,6 +94,13 @@ var
 // shared utilities defined as function declaration
 // (for no reason whatsoever, just less typing that
 // became actually more the moment I wrote this comment)
+
+  // if a cleaned url ends with a folder
+  // add the index.html value after
+  function addIndex(url) {
+    return url[url.length - 1] === '/' ?
+      (url + 'index.html') : url;
+  }
 
   // if an options.compress Array is passed
   // it will normalize all extensions as path.ext()
@@ -172,6 +179,7 @@ function tinyCDN(options) {
     // privagte scope "constants"
     USE_COMPRESSION = !!(options.compression || options.compress),
     USE_ETAG = !!options.etag,
+    AUTO_INDEX = options.autoIndex != false,
 
     // compressed file are white-listed by file extension
     // I am not sure how compatible is these days a compressed PDF
@@ -473,7 +481,9 @@ function tinyCDN(options) {
 
     var
       // remove any query string from the url
-      url = justURL(request.url),
+      url = AUTO_INDEX ?
+        addIndex(justURL(request.url)) :
+        justURL(request.url),
       // grab once the Accept-Encoding header, if any
       acceptEncoding = request.headers['accept-encoding'] || '',
       // and try to use it to figure out in which group
@@ -502,8 +512,8 @@ function tinyCDN(options) {
       resolved
     ;
 
-    // in case the url is the root folder, just fail
-    if (url === '/') {
+    // in case the url is a folder
+    if (url[url.length - 1] === '/') {
       failLoop(request, response);
       onresponse.call(options, FILE_ERROR, url);
     }
