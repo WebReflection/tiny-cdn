@@ -74,7 +74,6 @@ module.exports = function (tinyCDN) {
     server,
     sslCert,
     sslKey,
-    tcdn,
     args = process.argv,
     config = {},
     host = '0.0.0.0',
@@ -150,13 +149,7 @@ module.exports = function (tinyCDN) {
     }
   }
   if (run || build) {
-    tcdn = tinyCDN(config);
-    handler = function (request, response) {
-      if (request.url[request.url.length - 1] === '/') {
-        request.url += 'index.html';
-      }
-      tcdn(request, response);
-    };
+    handler = tinyCDN(config);
     if (ssl === 3) {
       server = https.createServer({
         key: sslKey,
