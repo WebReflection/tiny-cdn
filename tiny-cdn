@@ -410,6 +410,7 @@ function tinyCDN(options) {
     }));
     if (encoding) {
       headers['Content-Encoding'] = encoding;
+      headers['Vary'] = 'Accept-Encoding';
     }
     return headers;
   };
