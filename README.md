@@ -1,4 +1,8 @@
-# tiny-cdn [![build status](https://secure.travis-ci.org/WebReflection/tiny-cdn.svg)](http://travis-ci.org/WebReflection/tiny-cdn)
+# Deprecated
+
+Check the new, 100% code covered, **[µcdn](https://github.com/WebReflection/ucdn#readme)** instead 👍
+
+## tiny-cdn [![build status](https://secure.travis-ci.org/WebReflection/tiny-cdn.svg)](http://travis-ci.org/WebReflection/tiny-cdn)
 
 A tiny static files serving handler
 
